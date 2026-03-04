@@ -37,8 +37,14 @@ echo ""
 
 # Step 1: Use npx skills add to install
 echo "Running: npx skills add $SKILL_NAME"
-if ! npx skills add "$SKILL_NAME" 2>&1; then
+if npx skills add "$SKILL_NAME" 2>&1; then
+    SKILL_SOURCE="npx"
+    # Try to get version from npx skills info
+    SKILL_VERSION=$(npx skills info "$SKILL_NAME" --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version','unknown'))" 2>/dev/null || echo "unknown")
+else
     echo "Warning: npx skills add failed or skill already exists"
+    SKILL_SOURCE="local"
+    SKILL_VERSION="unknown"
 fi
 echo ""
 
@@ -65,17 +71,27 @@ else
     read -p "Enter choice (1-4): " choice
 fi
 
-# Get project identifier
+# Get project identifier (cross-platform: Linux sha256sum / macOS shasum)
 get_project_id() {
+    local hash_cmd="sha256sum"
+    if ! command -v sha256sum &>/dev/null; then
+        hash_cmd="shasum -a 256"
+    fi
+
     if [ -d ".git" ]; then
-        git remote get-url origin 2>/dev/null | sha256sum | cut -c1-12 || pwd | sha256sum | cut -c1-12
+        git remote get-url origin 2>/dev/null | $hash_cmd | cut -c1-12 || pwd | $hash_cmd | cut -c1-12
     else
-        pwd | sha256sum | cut -c1-12
+        pwd | $hash_cmd | cut -c1-12
     fi
 }
 
 PROJECT_ID=$(get_project_id)
 PROJECT_PATH=$(pwd)
+
+# Source tracking
+SKILL_SOURCE="${SKILL_SOURCE:-local}"
+SKILL_SOURCE_URL="${SKILL_SOURCE_URL:-}"
+SKILL_VERSION="${SKILL_VERSION:-unknown}"
 
 # Update JSON record
 update_record() {
@@ -83,48 +99,52 @@ update_record() {
     local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     # Use Python to safely update JSON
-    python3 << EOF
+    python3 - "$RECORD_FILE" "$SKILL_NAME" "$timestamp" "$target" "$PROJECT_ID" "$PROJECT_PATH" "$SKILL_SOURCE" "$SKILL_SOURCE_URL" "$SKILL_VERSION" << 'PYEOF'
 import json
 import sys
 
+record_file, skill_name, timestamp, target, project_id, project_path, source, source_url, version = sys.argv[1:10]
+
 try:
-    with open('$RECORD_FILE', 'r') as f:
+    with open(record_file, 'r') as f:
         data = json.load(f)
 except:
     data = {"skills": {}}
 
-skill_name = '$SKILL_NAME'
 if skill_name not in data['skills']:
     data['skills'][skill_name] = {
-        'installed_at': '$timestamp',
+        'installed_at': timestamp,
+        'source': source,
+        'source_url': source_url if source_url else None,
+        'version': version,
         'locations': []
     }
 
 location = {
-    'type': '$target',
-    'linked_at': '$timestamp'
+    'type': target,
+    'linked_at': timestamp
 }
 
-if '$target' == 'project':
-    location['project_id'] = '$PROJECT_ID'
-    location['project_path'] = '$PROJECT_PATH'
+if target == 'project':
+    location['project_id'] = project_id
+    location['project_path'] = project_path
 
 # Check if already exists
 exists = False
 for loc in data['skills'][skill_name]['locations']:
-    if loc['type'] == '$target':
-        if '$target' != 'project' or loc.get('project_id') == '$PROJECT_ID':
+    if loc['type'] == target:
+        if target != 'project' or loc.get('project_id') == project_id:
             exists = True
             break
 
 if not exists:
     data['skills'][skill_name]['locations'].append(location)
 
-with open('$RECORD_FILE', 'w') as f:
+with open(record_file, 'w') as f:
     json.dump(data, f, indent=2)
 
-print(f"Updated record: $RECORD_FILE")
-EOF
+print(f"Updated record: {record_file}")
+PYEOF
 }
 
 # Link functions

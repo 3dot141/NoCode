@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         *)
-            if [ -z "$SKILL_NAME" ] || [ "$SKILL_NAME" = "$1" ]; then
+            if [ -z "$SKILL_NAME" ]; then
                 SKILL_NAME=$1
             fi
             shift
@@ -79,37 +79,46 @@ EOF
 # Get all locations from JSON
 get_all_locations() {
     if [ -f "$RECORD_FILE" ]; then
-        python3 << EOF 2>/dev/null
+        python3 - "$SKILL_NAME" "$RECORD_FILE" << 'PYEOF' 2>/dev/null
 import json
 import os
+import sys
+
+skill_name = sys.argv[1]
+record_file = sys.argv[2]
 
 try:
-    with open('$RECORD_FILE', 'r') as f:
+    with open(record_file, 'r') as f:
         data = json.load(f)
 
-    skill = data.get('skills', {}).get('$SKILL_NAME', {})
+    skill = data.get('skills', {}).get(skill_name, {})
     locations = skill.get('locations', [])
 
     for loc in locations:
         loc_type = loc.get('type', '')
         if loc_type == 'global':
-            print(f"GLOBAL|{os.path.expanduser('~/.claude/skills/$SKILL_NAME')}")
+            print(f"GLOBAL|{os.path.expanduser(f'~/.claude/skills/{skill_name}')}")
         elif loc_type == 'project':
             project_path = loc.get('project_path', '')
             if project_path:
-                print(f"PROJECT|{project_path}/.claude/skills/$SKILL_NAME")
+                print(f"PROJECT|{project_path}/.claude/skills/{skill_name}")
 except Exception as e:
     pass
-EOF
+PYEOF
     fi
 }
 
-# Get project ID for current directory
+# Get project ID for current directory (cross-platform)
 get_project_id() {
+    local hash_cmd="sha256sum"
+    if ! command -v sha256sum &>/dev/null; then
+        hash_cmd="shasum -a 256"
+    fi
+
     if [ -d ".git" ]; then
-        git remote get-url origin 2>/dev/null | sha256sum | cut -c1-12 || pwd | sha256sum | cut -c1-12
+        git remote get-url origin 2>/dev/null | $hash_cmd | cut -c1-12 || pwd | $hash_cmd | cut -c1-12
     else
-        pwd | sha256sum | cut -c1-12
+        pwd | $hash_cmd | cut -c1-12
     fi
 }
 
