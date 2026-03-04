@@ -1,6 +1,6 @@
 ---
 name: skills-manager
-description: Manage Claude Code skills centralized repository. Use when users need to list, add, link, check, or remove skills. Triggers on phrases like "管理 skills", "添加 skill", "查看 skills", "链接 skill", "删除 skill", or any skill management operations.
+description: Manage Claude Code skills centralized repository. Use when users need to install, list, link, check, or remove skills. Triggers on "install skill", "添加 skill", "管理 skills", "查看 skills", "链接 skill", "删除 skill".
 ---
 
 # Skills Manager
@@ -18,7 +18,7 @@ Centralized management system for Claude Code skills.
 | Operation | Command |
 |-----------|---------|
 | List all skills | `list_skills.sh` |
-| Install skill (interactive) | `install_skill.sh <skill>` |
+| Install skill | `install_skill.sh <skill> [target]` |
 | Link to global | `link_global.sh <skill>` |
 | Link to project | `link_project.sh <skill>` |
 | Check/fix links | `check_links.sh` |
@@ -34,18 +34,31 @@ View all skills in central repository:
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/list_skills.sh
 ```
 
-### 2. Install Skill (Interactive)
+### 2. Install Skill
 
-Install a skill with interactive prompt to choose installation scope:
+Install a skill with optional non-interactive target specification.
 
+**When AI is asked to install a skill:**
+1. Ask user: "Where would you like to install this skill? 1) Global, 2) Project, 3) Both"
+2. Run `install_skill.sh <skill> <target>` with the chosen target
+
+**Usage:**
 ```bash
+# Non-interactive mode (preferred for AI)
+bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/install_skill.sh <skill-name> <target>
+
+# Interactive mode (prompts for target)
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/install_skill.sh <skill-name>
 ```
 
-This will prompt you to choose:
-- **Global** — Available in all projects (`~/.claude/skills/`)
-- **Project** — Available only in current project (`./.claude/skills/`)
-- **Both** — Available globally and in current project
+**Targets:** `global` (or `1`), `project` (or `2`), `both` (or `3`)
+
+**Examples:**
+```bash
+bash install_skill.sh my-skill both      # Install to global and project
+bash install_skill.sh my-skill global    # Install to global only
+bash install_skill.sh my-skill 2         # Install to project only (numeric)
+```
 
 ### 3. Link Skill Globally
 

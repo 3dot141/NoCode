@@ -2,11 +2,19 @@
 # Install a skill and choose where to link it (global, project, or both)
 
 SKILL_NAME=$1
+INSTALL_TARGET=$2
 CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
 GLOBAL_DIR="$HOME/.claude/skills"
 
 if [ -z "$SKILL_NAME" ]; then
-    echo "Usage: install_skill.sh <skill-name>"
+    echo "Usage: install_skill.sh <skill-name> [target]"
+    echo ""
+    echo "Targets:"
+    echo "  global   - Link to ~/.claude/skills/"
+    echo "  project  - Link to ./.claude/skills/"
+    echo "  both     - Link to both locations"
+    echo ""
+    echo "If target is not provided, interactive mode will be used."
     exit 1
 fi
 
@@ -19,14 +27,31 @@ fi
 echo ""
 echo "=== Install Skill: $SKILL_NAME ==="
 echo ""
-echo "Where would you like to install this skill?"
-echo ""
-echo "  1) Global (~/.claude/skills/) - Available in all projects"
-echo "  2) Project (./.claude/skills/) - Available only in current project"
-echo "  3) Both - Available globally and in current project"
-echo "  4) Cancel"
-echo ""
-read -p "Enter choice (1-4): " choice
+
+# Non-interactive mode: use second argument
+if [ -n "$INSTALL_TARGET" ]; then
+    case "$INSTALL_TARGET" in
+        global|1) choice="1" ;;
+        project|2) choice="2" ;;
+        both|3) choice="3" ;;
+        *)
+            echo "Error: Invalid target '$INSTALL_TARGET'"
+            echo "Valid targets: global, project, both (or 1, 2, 3)"
+            exit 1
+            ;;
+    esac
+    echo "Non-interactive mode: installing to '$INSTALL_TARGET'"
+else
+    # Interactive mode
+    echo "Where would you like to install this skill?"
+    echo ""
+    echo "  1) Global (~/.claude/skills/) - Available in all projects"
+    echo "  2) Project (./.claude/skills/) - Available only in current project"
+    echo "  3) Both - Available globally and in current project"
+    echo "  4) Cancel"
+    echo ""
+    read -p "Enter choice (1-4): " choice
+fi
 
 link_global() {
     if [ -L "$GLOBAL_DIR/$SKILL_NAME" ]; then
