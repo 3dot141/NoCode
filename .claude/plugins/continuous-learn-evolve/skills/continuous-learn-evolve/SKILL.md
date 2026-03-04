@@ -1,16 +1,15 @@
 ---
 name: continuous-learn-evolve
-description: Instinct-based learning system that observes sessions via hooks, creates atomic instincts with confidence scoring, and evolves them into skills/commands/agents. v2.1 adds project-scoped instincts to prevent cross-project contamination.
+description: Instinct-based learning system that observes sessions via hooks, creates atomic instincts with confidence scoring, and evolves them into skills/commands/agents. v0.0.1 adds project-scoped instincts to prevent cross-project contamination.
 origin: ECC
-version: 2.1.0
+version: 0.0.1
 ---
 
-# Continuous Learning v2.1 - Instinct
--Based Architecture
+# Continuous Learn Evolve v0.0.1 - Instinct-Based Architecture
 
 An advanced learning system that turns your Claude Code sessions into reusable knowledge through atomic "instincts" - small learned behaviors with confidence scoring.
 
-**v2.1** adds **project-scoped instincts** — React patterns stay in your React project, Python conventions stay in your Python project, and universal patterns (like "always validate input") are shared globally.
+**v0.0.1** adds **project-scoped instincts** — React patterns stay in your React project, Python conventions stay in your Python project, and universal patterns (like "always validate input") are shared globally.
 
 ## When to Activate
 
@@ -22,9 +21,9 @@ An advanced learning system that turns your Claude Code sessions into reusable k
 - Managing project-scoped vs global instincts
 - Promoting instincts from project to global scope
 
-## What's New in v2.1
+## What's New in v0.0.1
 
-| Feature | v2.0 | v2.1 |
+| Feature | v0.0.0 | v0.0.1 |
 |---------|------|------|
 | Storage | Global (~/.claude/homunculus/) | Project-scoped (projects/<hash>/) |
 | Scope | All instincts apply everywhere | Project-scoped + global |
@@ -225,7 +224,7 @@ Edit `config.json` to control the background observer:
 
 ```json
 {
-  "version": "2.1",
+  "version": "0.0.1",
   "observer": {
     "enabled": false,
     "run_interval_minutes": 5,
@@ -339,7 +338,7 @@ Hooks fire **100% of the time**, deterministically. This means:
 
 ## Backward Compatibility
 
-v2.1 is fully compatible with v2.0 and v1:
+v0.0.1 is fully compatible with v0.0.0 and v1:
 - Existing global instincts in `~/.claude/homunculus/instincts/` still work as global instincts
 - Existing `~/.claude/skills/learned/` skills from v1 still work
 - Stop hook still runs (but now also feeds into v2)
