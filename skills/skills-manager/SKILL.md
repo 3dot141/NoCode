@@ -18,6 +18,7 @@ Centralized management system for Claude Code skills.
 | Operation | Command |
 |-----------|---------|
 | List all skills | `list_skills.sh` |
+| Install skill (interactive) | `install_skill.sh <skill>` |
 | Link to global | `link_global.sh <skill>` |
 | Link to project | `link_project.sh <skill>` |
 | Check/fix links | `check_links.sh` |
@@ -33,7 +34,20 @@ View all skills in central repository:
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/list_skills.sh
 ```
 
-### 2. Link Skill Globally
+### 2. Install Skill (Interactive)
+
+Install a skill with interactive prompt to choose installation scope:
+
+```bash
+bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/install_skill.sh <skill-name>
+```
+
+This will prompt you to choose:
+- **Global** — Available in all projects (`~/.claude/skills/`)
+- **Project** — Available only in current project (`./.claude/skills/`)
+- **Both** — Available globally and in current project
+
+### 3. Link Skill Globally
 
 Make a skill available globally:
 
@@ -41,7 +55,7 @@ Make a skill available globally:
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/link_global.sh <skill-name>
 ```
 
-### 3. Link Skill to Project
+### 4. Link Skill to Project
 
 Make a skill available in current project:
 
@@ -49,7 +63,7 @@ Make a skill available in current project:
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/link_project.sh <skill-name>
 ```
 
-### 4. Check and Fix Links
+### 5. Check and Fix Links
 
 Verify all symlinks point to correct locations:
 
@@ -57,7 +71,7 @@ Verify all symlinks point to correct locations:
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/check_links.sh
 ```
 
-### 5. Remove Skill
+### 6. Remove Skill
 
 Delete skill from central repository and all symlinks:
 
