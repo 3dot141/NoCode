@@ -1,10 +1,10 @@
 ---
-name: evolve
+name: instinct-evolve
 description: Cluster related instincts into skills/commands/agents
 command: true
 ---
 
-# Evolve Command
+# Instinct Evolve Command
 
 Analyze instincts and cluster them into higher-level structures - commands, skills, or agents.
 
@@ -19,8 +19,8 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learn-evolve/scripts/instinct-c
 ## Usage
 
 ```bash
-/evolve              # Analyze only
-/evolve --generate   # Also create files in evolved/{skills,commands,agents}/
+/instinct-evolve              # Analyze only
+/instinct-evolve --generate   # Also create files in evolved/{skills,commands,agents}/
 ```
 
 ## What to Do

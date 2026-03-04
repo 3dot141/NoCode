@@ -112,7 +112,7 @@ Session Activity (in a git repo)
 |   * grep-before-edit.yaml (0.6) [global]     |
 +---------------------------------------------+
       |
-      | /evolve clusters + /promote
+      | /instinct-evolve clusters + /instinct-promote
       v
 +---------------------------------------------+
 |  projects/<hash>/evolved/ (project-scoped)   |
@@ -201,11 +201,11 @@ mkdir -p ~/.claude/homunculus/{instincts/{personal,inherited},evolved/{agents,sk
 
 ```bash
 /instinct-status     # Show learned instincts (project + global)
-/evolve              # Cluster related instincts into skills/commands
+/instinct-evolve     # Cluster related instincts into skills/commands
 /instinct-export     # Export instincts to file
 /instinct-import     # Import instincts from others
-/promote             # Promote project instincts to global scope
-/projects            # List all known projects and their instinct counts
+/instinct-promote    # Promote project instincts to global scope
+/instinct-projects   # List all known projects and their instinct counts
 ```
 
 ## Commands
@@ -213,11 +213,11 @@ mkdir -p ~/.claude/homunculus/{instincts/{personal,inherited},evolved/{agents,sk
 | Command | Description |
 |---------|-------------|
 | `/instinct-status` | Show all instincts (project-scoped + global) with confidence |
-| `/evolve` | Cluster related instincts into skills/commands, suggest promotions |
+| `/instinct-evolve` | Cluster related instincts into skills/commands, suggest promotions |
 | `/instinct-export` | Export instincts (filterable by scope/domain) |
 | `/instinct-import <file>` | Import instincts with scope control |
-| `/promote [id]` | Promote project instincts to global scope |
-| `/projects` | List all known projects and their instinct counts |
+| `/instinct-promote [id]` | Promote project instincts to global scope |
+| `/instinct-projects` | List all known projects and their instinct counts |
 
 ## Configuration
 
@@ -305,7 +305,7 @@ python3 instinct-cli.py promote
 python3 instinct-cli.py promote --dry-run
 ```
 
-The `/evolve` command also suggests promotion candidates.
+The `/instinct-evolve` command also suggests promotion candidates.
 
 ## Confidence Scoring
 

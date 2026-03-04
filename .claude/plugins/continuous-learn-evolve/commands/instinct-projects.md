@@ -1,10 +1,10 @@
 ---
-name: projects
+name: instinct-projects
 description: List known projects and their instinct statistics
 command: true
 ---
 
-# Projects Command
+# Instinct Projects Command
 
 List project registry entries and per-project instinct/observation counts.
 
@@ -19,7 +19,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learn-evolve/scripts/instinct-c
 ## Usage
 
 ```bash
-/projects
+/instinct-projects
 ```
 
 ## What to Do

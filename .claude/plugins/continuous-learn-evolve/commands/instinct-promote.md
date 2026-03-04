@@ -1,10 +1,10 @@
 ---
-name: promote
+name: instinct-promote
 description: Promote project instincts to global scope
 command: true
 ---
 
-# Promote Command
+# Instinct Promote Command
 
 Move instincts from project scope to global scope.
 
@@ -19,10 +19,10 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/continuous-learn-evolve/scripts/instinct-c
 ## Usage
 
 ```bash
-/promote              # Auto-promote qualifying instincts
-/promote <instinct-id>  # Promote specific instinct
-/promote --dry-run    # Preview without changes
-/promote --force      # Skip confirmation
+/instinct-promote              # Auto-promote qualifying instincts
+/instinct-promote <instinct-id>  # Promote specific instinct
+/instinct-promote --dry-run    # Preview without changes
+/instinct-promote --force      # Skip confirmation
 ```
 
 ## Auto-Promotion Criteria
@@ -55,11 +55,11 @@ With `scope: global` set in metadata.
 
 ```bash
 # Preview what would be promoted
-/promote --dry-run
+/instinct-promote --dry-run
 
 # Promote a specific instinct
-/promote prefer-explicit-errors
+/instinct-promote prefer-explicit-errors
 
 # Force promote without confirmation
-/promote always-validate-input --force
+/instinct-promote always-validate-input --force
 ```

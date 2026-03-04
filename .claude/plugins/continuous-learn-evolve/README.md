@@ -1,10 +1,10 @@
-# Continuous Learning v2.1 Plugin
+# Continuous Learn Evolve v0.0.1 Plugin
 
 > **Fork Source**: 本项目从 [affaan-m/everything-claude-code/skills/continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2) fork 并打包为 Claude Code 插件。
 
 An advanced learning system that turns your Claude Code sessions into reusable knowledge through atomic "instincts" - small learned behaviors with confidence scoring.
 
-**v2.1** adds **project-scoped instincts** — React patterns stay in your React project, Python conventions stay in your Python project, and universal patterns (like "always validate input") are shared globally.
+**v0.0.1** adds **project-scoped instincts** — React patterns stay in your React project, Python conventions stay in your Python project, and universal patterns (like "always validate input") are shared globally.
 
 ---
 
@@ -13,7 +13,7 @@ An advanced learning system that turns your Claude Code sessions into reusable k
 | Component | Count | Description |
 |-----------|-------|-------------|
 | Skills | 1 | `continuous-learn-evolve` - Core learning system |
-| Commands | 6 | `/instinct-status`, `/evolve`, `/instinct-export`, `/instinct-import`, `/promote`, `/projects` |
+| Commands | 6 | `/instinct-status`, `/instinct-evolve`, `/instinct-export`, `/instinct-import`, `/instinct-promote`, `/instinct-projects` |
 | Agents | 1 | `observer` - Background pattern analyzer |
 | Hooks | 2 | PreToolUse + PostToolUse observation hooks |
 
@@ -103,11 +103,11 @@ The system creates directories automatically on first use:
 | Command | Purpose |
 |---------|---------|
 | `/instinct-status` | Show learned instincts (project + global) |
-| `/evolve` | Cluster instincts into skills/commands/agents |
+| `/instinct-evolve` | Cluster instincts into skills/commands/agents |
 | `/instinct-export` | Export instincts to shareable YAML |
 | `/instinct-import <file>` | Import instincts from others |
-| `/promote [id]` | Promote project instincts to global |
-| `/projects` | List all known projects |
+| `/instinct-promote [id]` | Promote project instincts to global |
+| `/instinct-projects` | List all known projects |
 
 ---
 
@@ -181,7 +181,7 @@ Session Activity (in a git repo)
 |   * grep-before-edit.yaml (0.6) [global]     |
 +---------------------------------------------+
       |
-      | /evolve clusters + /promote
+      | /instinct-evolve clusters + /instinct-promote
       v
 +---------------------------------------------+
 |  projects/<hash>/evolved/ (project-scoped)   |
@@ -233,13 +233,13 @@ When the same instinct appears in multiple projects with high confidence, it's a
 **How to promote:**
 ```bash
 # Promote a specific instinct
-/promote prefer-explicit-errors
+/instinct-promote prefer-explicit-errors
 
 # Auto-promote all qualifying instincts
-/promote
+/instinct-promote
 
 # Preview without changes
-/promote --dry-run
+/instinct-promote --dry-run
 ```
 
 ---
@@ -273,7 +273,7 @@ Edit `~/.claude/homunculus/config.json` to control the background observer:
 
 ```json
 {
-  "version": "2.1",
+  "version": "0.0.1",
   "observer": {
     "enabled": false,
     "run_interval_minutes": 5,
@@ -303,16 +303,16 @@ Edit `~/.claude/homunculus/config.json` to control the background observer:
 ## File Structure
 
 ```
-continuous-learn-evolve-plugin/
+continuous-learn-evolve/
 ├── plugin.json              # Plugin manifest
 ├── README.md                # This file
 ├── commands/                # Slash commands
-│   ├── evolve.md
+│   ├── instinct-evolve.md
 │   ├── instinct-export.md
 │   ├── instinct-import.md
-│   ├── instinct-status.md
-│   ├── promote.md
-│   └── projects.md
+│   ├── instinct-promote.md
+│   ├── instinct-projects.md
+│   └── instinct-status.md
 └── skills/
     └── continuous-learn-evolve/
         ├── SKILL.md         # Core skill documentation
