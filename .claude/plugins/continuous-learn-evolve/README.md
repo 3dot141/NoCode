@@ -341,7 +341,7 @@ continuous-learn-evolve/
 ## Credits
 
 - **Original Author**: [affaan-m](https://github.com/affaan-m) - 创建了 [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2) skill
-- **Fork & Plugin Packaging**: 本项目由原 skill 打包为 Claude Code 插件，保留所有核心功能和 MIT 许可证
+- **Fork & Plugin Packaging**: [3dot141](https://github.com/3dot141) - 本项目由原 skill 打包为 Claude Code 插件，保留所有核心功能和 MIT 许可证
 
 ---
 
