@@ -1,0 +1,4 @@
+{
+  "PreToolUse": ["./observe.sh"],
+  "PostToolUse": ["./observe.sh"]
+}
