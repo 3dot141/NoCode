@@ -1,7 +1,7 @@
 #!/bin/bash
 # Check and fix broken symlinks
 
-CENTRAL_REPO="/Users/yes365/Run/NoCode/skills"
+CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
 
 check_directory() {
     local dir=$1

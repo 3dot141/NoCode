@@ -1,7 +1,7 @@
 #!/bin/bash
 # List all skills in the central repository
 
-CENTRAL_REPO="/Users/yes365/Run/NoCode/skills"
+CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
 
 echo "=== Skills in Central Repository ==="
 ls -1 "$CENTRAL_REPO" | grep -v ".DS_Store" | sort

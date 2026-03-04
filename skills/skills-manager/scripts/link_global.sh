@@ -2,7 +2,7 @@
 # Link a skill to global ~/.claude/skills/
 
 SKILL_NAME=$1
-CENTRAL_REPO="/Users/yes365/Run/NoCode/skills"
+CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
 GLOBAL_DIR="$HOME/.claude/skills"
 
 if [ -z "$SKILL_NAME" ]; then

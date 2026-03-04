@@ -2,7 +2,7 @@
 # Remove a skill from central repository and all symlinks
 
 SKILL_NAME=$1
-CENTRAL_REPO="/Users/yes365/Run/NoCode/skills"
+CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
 
 if [ -z "$SKILL_NAME" ]; then
     echo "Usage: remove_skill.sh <skill-name>"
