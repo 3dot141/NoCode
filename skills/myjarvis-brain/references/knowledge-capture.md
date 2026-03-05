@@ -1,5 +1,7 @@
 # Knowledge Capture Reference
 
+> **When to read this**: When migrating content to Knowledge or creating permanent knowledge documents.
+
 Guidelines for migrating and creating permanent knowledge in the MyJarvis Knowledge system.
 
 ---
@@ -17,23 +19,23 @@ Knowledge/
 └── 4-Outcomes/                # Final outputs
 ```
 
-**默认文档创建位置**: `Memory/Out/YYMM/`  
-**知识库存储位置**: `Knowledge/2-Outputs/AI/` (仅迁移时使用)
+**Default document creation location**: `Memory/Out/YYMM/`
+**Knowledge storage location**: `Knowledge/2-Outputs/AI/` (only for migration)
 
 ---
 
 ## Document Creation Rule
 
-**核心原则**：所有新文档必须首先在 `Memory/Out/` 中创建。
+**Core Principle**: All new documents must first be created in `Memory/Out/`.
 
-### 默认创建流程
+### Default Creation Flow
 
 **Flow**: Input → `Memory/Out/YYMM/`
 
-**When to use** (默认情况，适用于所有新文档生成):
-- 用户要求"创建文档"、"生成文档"
-- 分析内容后输出文档
-- 整合多个来源生成新文档
+**When to use** (default case, applies to all new document generation):
+- User requests "create document" or "generate document"
+- Analyzing content and outputting documents
+- Integrating multiple sources to generate new documents
 
 **Procedure**:
 1. Gather and analyze source material
@@ -46,10 +48,10 @@ Knowledge/
 
 **Flow**: `Memory/Out/` → `Knowledge/2-Outputs/AI/`
 
-**When to use** (仅当用户明确指示时):
-- 用户说"沉淀到知识库"
-- 用户说"迁移到 Knowledge"
-- 用户明确指定将 Memory/Out 文档整理到知识库
+**When to use** (only when user explicitly instructs):
+- User says "capture to Knowledge"
+- User says "migrate to Knowledge"
+- User explicitly requests organizing Memory/Out documents into Knowledge
 
 **Procedure**:
 1. Locate source document(s) in `Memory/Out/YYMM/`
@@ -58,13 +60,13 @@ Knowledge/
 4. Create in `Knowledge/2-Outputs/AI/` with proper naming
 5. Add `source` frontmatter field linking to original
 6. Add backlink in original Memory document
-7. Mark original as "已迁移" if appropriate
+7. Mark original as "migrated" if appropriate
 
-### 禁止行为
+### Forbidden Actions
 
-❌ **不要自动迁移**：用户说"创建文档"时，不要自动沉淀到 Knowledge  
-❌ **不要跳过 Memory**：不要直接创建文档到 Knowledge/2-Outputs/AI/  
-❌ **不要过度执行**：分析 → 创建文档 即可，不要自动"顺便"迁移
+❌ **Don't auto-migrate**: When user says "create document", don't automatically capture to Knowledge
+❌ **Don't skip Memory**: Don't create documents directly in Knowledge/2-Outputs/AI/
+❌ **Don't over-execute**: Analyze → Create document only, don't automatically "also" migrate
 
 ---
 
@@ -113,12 +115,12 @@ yymmdd-<kebab-case-description>.md
 ```yaml
 ---
 aliases:                    # Alternative names for this concept
-  - 别名1
-  - 别名2
+  - alias1
+  - alias2
 draft: false                # true = work in progress, false = finalized
 tags:                       # Taxonomy tags
-  - 技术/React
-  - 概念/架构
+  - tech/React
+  - concept/Architecture
 created_date: YYYY-MM-DD HH:MM
 modified_date: YYYY-MM-DD HH:MM
 summary: "One-line description of the content"
@@ -139,8 +141,8 @@ tech_stack:
   - TypeScript
 
 # For project knowledge
-project: "项目名称"
-phase: "设计阶段"
+project: "Project Name"
+phase: "Design Phase"
 
 # For learning resources
 resource_type: tutorial|reference|concept|howto
@@ -164,122 +166,122 @@ prerequisites:
 ### Type 1: Concept/Theory
 
 ```markdown
-# 概念名称
+# Concept Name
 
-## 一句话定义
-[核心概念的简明定义]
+## One-sentence Definition
+[Core concept concise definition]
 
-## 详细解释
-[深入阐述]
+## Detailed Explanation
+[In-depth elaboration]
 
-## 为什么重要
-[价值和应用场景]
+## Why It Matters
+[Value and application scenarios]
 
-## 关键要素
-- 要素1: [说明]
-- 要素2: [说明]
+## Key Elements
+- Element 1: [description]
+- Element 2: [description]
 
-## 相关概念
-- [[相关概念1]]
-- [[相关概念2]]
+## Related Concepts
+- [[Related Concept 1]]
+- [[Related Concept 2]]
 
-## 实际案例
-[具体例子]
+## Real-world Examples
+[Specific examples]
 
-## 参考资源
-- [资源名称](链接)
+## Reference Resources
+- [Resource Name](link)
 ```
 
 ### Type 2: How-To/Guide
 
 ```markdown
-# 操作名称
+# Operation Name
 
-## 目标
-[要完成什么]
+## Goal
+[What to accomplish]
 
-## 前提条件
-- [ ] 条件1
-- [ ] 条件2
+## Prerequisites
+- [ ] Condition 1
+- [ ] Condition 2
 
-## 步骤
+## Steps
 
-### 步骤1: [名称]
-[详细操作]
-```代码示例```
+### Step 1: [Name]
+[Detailed operation]
+```code example```
 
-### 步骤2: [名称]
+### Step 2: [Name]
 ...
 
-## 验证
-[如何确认成功]
+## Verification
+[How to confirm success]
 
-## 常见问题
+## Common Issues
 
-### 问题1
-**解决方案**: [说明]
+### Issue 1
+**Solution**: [description]
 
-## 相关操作
-- [[相关操作1]]
+## Related Operations
+- [[Related Operation 1]]
 ```
 
 ### Type 3: Reference/Documentation
 
 ```markdown
-# 主题参考
+# Topic Reference
 
-## 快速参考表
-| 字段 | 类型 | 说明 |
-|------|------|------|
+## Quick Reference Table
+| Field | Type | Description |
+|-------|------|-------------|
 | ... | ... | ... |
 
-## 详细说明
+## Detailed Explanation
 
-### 部分1
-[内容]
+### Section 1
+[Content]
 
-### 部分2
-[内容]
+### Section 2
+[Content]
 
-## 示例
-```代码/示例```
+## Examples
+```code/example```
 
-## 版本历史
-| 版本 | 日期 | 变更 |
-|------|------|------|
-| v1.0 | 日期 | 初始版本 |
+## Version History
+| Version | Date | Changes |
+|---------|------|---------|
+| v1.0 | Date | Initial version |
 ```
 
 ### Type 4: Experience/Retrospective
 
 ```markdown
-# 经历/项目回顾
+# Experience/Project Retrospective
 
-## 背景
-[项目/经历的上下文]
+## Background
+[Project/experience context]
 
-## 目标
-[原定目标]
+## Goals
+[Original goals]
 
-## 过程
-[关键阶段和决策]
+## Process
+[Key phases and decisions]
 
-## 结果
-[最终成果]
+## Results
+[Final outcomes]
 
-## 关键收获
-- 收获1: [说明]
-- 收获2: [说明]
+## Key Takeaways
+- Takeaway 1: [description]
+- Takeaway 2: [description]
 
-## 可复用的模式
-- 模式1: [说明]
+## Reusable Patterns
+- Pattern 1: [description]
 
-## 改进点
-- [ ] 改进1
-- [ ] 改进2
+## Improvements
+- [ ] Improvement 1
+- [ ] Improvement 2
 
-## 相关项目
-- [[相关项目]]
+## Related Projects
+- [[Related Project]]
 ```
 
 ---
@@ -290,38 +292,38 @@ prerequisites:
 Tags use hierarchy with `/` separator:
 ```yaml
 tags:
-  - 领域/子领域
-  - 类型/子类型
-  - 状态/当前状态
+  - domain/subdomain
+  - type/subtype
+  - status/current_status
 ```
 
 ### Recommended Taxonomy
 
-**Domain (领域)**:
-- `技术/前端`, `技术/后端`, `技术/DevOps`
-- `技术/语言/JavaScript`, `技术/语言/Python`
-- `技术/框架/React`, `技术/框架/Vue`
-- `产品/需求`, `产品/设计`, `产品/分析`
-- `管理/项目`, `管理/团队`, `管理/流程`
-- `个人/效率`, `个人/学习`, `个人/健康`
+**Domain**:
+- `tech/frontend`, `tech/backend`, `tech/DevOps`
+- `tech/language/JavaScript`, `tech/language/Python`
+- `tech/framework/React`, `tech/framework/Vue`
+- `product/requirements`, `product/design`, `product/analysis`
+- `management/project`, `management/team`, `management/process`
+- `personal/productivity`, `personal/learning`, `personal/health`
 
-**Type (类型)**:
-- `类型/概念` - Theoretical concepts
-- `类型/实践` - Practical experiences
-- `类型/教程` - Step-by-step guides
-- `类型/参考` - Reference documentation
-- `类型/回顾` - Retrospectives
-- `类型/决策` - Decision records
+**Type**:
+- `type/concept` - Theoretical concepts
+- `type/practice` - Practical experiences
+- `type/tutorial` - Step-by-step guides
+- `type/reference` - Reference documentation
+- `type/retrospective` - Retrospectives
+- `type/decision` - Decision records
 
-**Status (状态)**:
-- `状态/草稿` - Work in progress
-- `状态/已验证` - Verified and tested
-- `状态/归档` - Historical, may be outdated
+**Status**:
+- `status/draft` - Work in progress
+- `status/verified` - Verified and tested
+- `status/archived` - Historical, may be outdated
 
-**Priority (优先级)**:
-- `优先级/核心` - Core knowledge, frequently referenced
-- `优先级/重要` - Important but secondary
-- `优先级/一般` - Nice to have
+**Priority**:
+- `priority/core` - Core knowledge, frequently referenced
+- `priority/important` - Important but secondary
+- `priority/general` - Nice to have
 
 ---
 
@@ -339,24 +341,24 @@ Use Obsidian wikilink format:
 
 ### Link Types
 
-**Conceptual links** (思想关联):
+**Conceptual links** (thought connections):
 ```markdown
-这个概念与 [[相关概念]] 密切相关。
+This concept is closely related to [[Related Concept]].
 ```
 
-**Sequential links** (流程关联):
+**Sequential links** (process connections):
 ```markdown
-完成后，继续 [[下一步操作]]。
+After completion, proceed to [[Next Step]].
 ```
 
-**Source links** (来源关联):
+**Source links** (origin connections):
 ```markdown
-源自 [[原始文档]] 的深入分析。
+In-depth analysis derived from [[Original Document]].
 ```
 
-**Application links** (应用关联):
+**Application links** (usage connections):
 ```markdown
-这个模式在 [[实际项目]] 中得到了应用。
+This pattern was applied in [[Actual Project]].
 ```
 
 ### Link Graph Maintenance
@@ -387,7 +389,7 @@ Before considering a Memory document ready for migration:
 
 During periodic summaries (weekly/monthly):
 
-1. Review all "知识沉淀候选" sections from daily/weekly notes
+1. Review all "knowledge capture candidates" sections from daily/weekly notes
 2. Group related candidates together
 3. For each group:
    - Determine if worth preserving

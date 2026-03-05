@@ -1,5 +1,5 @@
 #!/bin/bash
-# Scan configured roots, repair .agents/.claude mapping, and rebuild manager config.
+# Scan roots, repair .agents/.claude mapping, and rebuild manager config.
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ SCAN_AI_ROOT="${2:-$HOME/AI}"
 mkdir -p "$(dirname "$CONFIG_FILE")"
 
 python3 - "$CONFIG_FILE" "$RECORD_FILE" \
-    "$DEFAULT_CENTRAL_REPO" "$DEFAULT_GLOBAL_CLAUDE_DIR" "$DEFAULT_GLOBAL_AGENTS_LINK" \
+    "$DEFAULT_CENTRAL_REPO" "$DEFAULT_GLOBAL_AGENTS_DIR" "$DEFAULT_GLOBAL_CLAUDE_LINK" \
     "$SCAN_HOME" "$SCAN_AI_ROOT" <<'PYEOF'
 import json
 import os
@@ -28,12 +28,13 @@ from pathlib import Path
     config_file,
     record_file,
     default_central_repo,
-    default_global_claude_dir,
-    default_global_agents_link,
+    default_global_agents_dir,
+    default_global_claude_link,
     scan_home,
     scan_ai_root,
 ) = sys.argv[1:8]
 
+run_ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
 scan_home_path = Path(scan_home).expanduser().resolve()
 scan_ai_root_path = Path(scan_ai_root).expanduser().resolve()
 config_path = Path(config_file).expanduser()
@@ -46,16 +47,14 @@ if config_path.exists():
     except Exception:
         existing_cfg = {}
 
-def expanded(cfg_key: str, default_value: str) -> str:
+def e(cfg_key: str, default_value: str) -> str:
     return os.path.expanduser(existing_cfg.get(cfg_key, default_value))
 
-central_repo = expanded("central_repo", default_central_repo)
-global_claude_dir = expanded("global_claude_dir", default_global_claude_dir)
-global_agents_link = expanded("global_agents_link", default_global_agents_link)
-if os.path.abspath(global_agents_link) == os.path.abspath(global_claude_dir):
-    global_agents_link = os.path.expanduser(default_global_agents_link)
-project_claude_dir = existing_cfg.get("project_claude_dir", ".claude/skills")
-project_agents_link = existing_cfg.get("project_agents_link", ".agents/skills")
+central_repo = e("central_repo", default_central_repo)
+global_agents_dir = e("global_agents_dir", existing_cfg.get("global_agents_link", default_global_agents_dir))
+global_claude_link = e("global_claude_link", existing_cfg.get("global_claude_dir", default_global_claude_link))
+project_agents_dir = existing_cfg.get("project_agents_dir", existing_cfg.get("project_agents_link", ".agents/skills"))
+project_claude_link = existing_cfg.get("project_claude_link", existing_cfg.get("project_claude_dir", ".claude/skills"))
 
 roots = [scan_home_path]
 if scan_ai_root_path.is_dir():
@@ -65,155 +64,242 @@ if scan_ai_root_path.is_dir():
 
 managed_projects = []
 report = []
-run_ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
 
 def ensure_dir(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
-def migrate_and_link_agents(agents_skills: Path, claude_skills: Path, expected_target: str) -> dict:
-    result = {"status": "ok", "moved": [], "conflicts": [], "backed_up_conflicts": []}
+def backup_path(path: Path, suffix: str) -> Path:
+    candidate = path.parent / f"{path.name}.{suffix}.{run_ts}"
+    idx = 1
+    while candidate.exists() or candidate.is_symlink():
+        candidate = path.parent / f"{path.name}.{suffix}.{run_ts}.{idx}"
+        idx += 1
+    return candidate
 
-    if agents_skills.is_symlink():
-        current_target = os.readlink(agents_skills)
-        expected_abs = str(claude_skills)
-        if current_target not in (expected_target, expected_abs):
-            agents_skills.unlink()
-            agents_skills.symlink_to(expected_target)
-            result["status"] = "relinked"
+def backup_into_bucket(path: Path, bucket: Path) -> Path:
+    ensure_dir(bucket)
+    candidate = bucket / path.name
+    idx = 1
+    while candidate.exists() or candidate.is_symlink():
+        candidate = bucket / f"{path.name}.{idx}"
+        idx += 1
+    return candidate
+
+def move_entries(src: Path, dst: Path) -> tuple[list[str], list[str]]:
+    moved = []
+    conflicts = []
+    ensure_dir(dst)
+    if not src.is_dir():
+        return moved, conflicts
+    backup_bucket = src.parent / f"{src.name}.legacy.{run_ts}"
+
+    for entry in sorted(src.iterdir(), key=lambda p: p.name.lower()):
+        if entry.name in (".DS_Store",):
+            try:
+                entry.unlink()
+            except Exception:
+                pass
+            continue
+
+        target = dst / entry.name
+        if target.exists() or target.is_symlink():
+            ensure_dir(backup_bucket)
+            conflict_backup = backup_bucket / entry.name
+            idx = 1
+            while conflict_backup.exists() or conflict_backup.is_symlink():
+                conflict_backup = backup_bucket / f"{entry.name}.{idx}"
+                idx += 1
+            shutil.move(str(entry), str(conflict_backup))
+            conflicts.append(str(conflict_backup))
+            continue
+
+        shutil.move(str(entry), str(target))
+        moved.append(entry.name)
+
+    return moved, conflicts
+
+def sync_one_skill_from_central(skill_name: str, dst_path: Path) -> bool:
+    src = Path(central_repo) / skill_name
+    if not src.is_dir():
+        return False
+
+    tmp = dst_path.parent / f".{skill_name}.tmp.{run_ts}"
+    if tmp.exists():
+        shutil.rmtree(tmp)
+    ensure_dir(tmp)
+    for child in src.iterdir():
+        src_child = child
+        dst_child = tmp / child.name
+        if src_child.is_dir():
+            shutil.copytree(src_child, dst_child, symlinks=True)
         else:
-            result["status"] = "already_linked"
-        return result
+            shutil.copy2(src_child, dst_child, follow_symlinks=False)
+    if dst_path.exists() or dst_path.is_symlink():
+        if dst_path.is_dir() and not dst_path.is_symlink():
+            shutil.rmtree(dst_path)
+        else:
+            dst_path.unlink()
+    tmp.rename(dst_path)
+    return True
 
-    if agents_skills.exists():
-        if agents_skills.is_dir():
-            for entry in sorted(agents_skills.iterdir(), key=lambda p: p.name.lower()):
-                if entry.name == ".DS_Store":
-                    try:
-                        entry.unlink()
-                    except Exception:
-                        pass
+def ensure_real_agents_dir(agents_skills: Path, item: dict) -> None:
+    if agents_skills.is_symlink():
+        migrated_dir = backup_path(agents_skills, "symlink")
+        ensure_dir(migrated_dir)
+        try:
+            for child in agents_skills.iterdir():
+                if child.name == ".DS_Store":
                     continue
+                target = migrated_dir / child.name
+                if child.is_dir():
+                    shutil.copytree(child, target, symlinks=True)
+                else:
+                    shutil.copy2(child, target, follow_symlinks=False)
+        except Exception:
+            pass
+        agents_skills.unlink()
+        ensure_dir(agents_skills)
+        for child in migrated_dir.iterdir():
+            target = agents_skills / child.name
+            if target.exists() or target.is_symlink():
+                continue
+            shutil.move(str(child), str(target))
+        shutil.rmtree(migrated_dir, ignore_errors=True)
+        item["agents_fix"].append("replaced_symlink_with_dir")
+        return
 
-                dst = claude_skills / entry.name
-                if dst.exists() or dst.is_symlink():
-                    same_symlink = (
-                        entry.is_symlink()
-                        and dst.is_symlink()
-                        and os.readlink(entry) == os.readlink(dst)
-                    )
-                    if same_symlink:
-                        entry.unlink()
-                    else:
-                        result["conflicts"].append(str(entry))
-                    continue
+    if agents_skills.exists() and not agents_skills.is_dir():
+        backup = backup_path(agents_skills, "bak")
+        agents_skills.rename(backup)
+        item["agents_fix"].append(f"backup_non_dir:{backup}")
 
-                shutil.move(str(entry), str(dst))
-                result["moved"].append(entry.name)
+    ensure_dir(agents_skills)
 
-            if result["conflicts"]:
-                backup_dir = agents_skills.parent / f"{agents_skills.name}.legacy.{run_ts}"
-                ensure_dir(backup_dir)
-                for src in result["conflicts"]:
-                    src_path = Path(src)
-                    if not src_path.exists() and not src_path.is_symlink():
-                        continue
-                    dst = backup_dir / src_path.name
+def ensure_claude_link(claude_skills: Path, agents_skills: Path, item: dict) -> None:
+    if claude_skills.is_symlink():
+        if claude_skills.resolve() == agents_skills.resolve():
+            return
+        claude_skills.unlink()
+        rel = os.path.relpath(str(agents_skills), str(claude_skills.parent))
+        claude_skills.symlink_to(rel)
+        item["claude_fix"].append("relinked")
+        return
+
+    if claude_skills.exists():
+        if claude_skills.is_dir():
+            moved, conflicts = move_entries(claude_skills, agents_skills)
+            if moved:
+                item["moved_from_claude"].extend(moved)
+            if conflicts:
+                item["backups"].extend(conflicts)
+            try:
+                claude_skills.rmdir()
+            except OSError:
+                residue_backup = claude_skills.parent / f"{claude_skills.name}.legacy.{run_ts}"
+                ensure_dir(residue_backup)
+                for child in sorted(claude_skills.iterdir(), key=lambda p: p.name.lower()):
+                    dst = residue_backup / child.name
                     idx = 1
                     while dst.exists() or dst.is_symlink():
-                        dst = backup_dir / f"{src_path.name}.{idx}"
+                        dst = residue_backup / f"{child.name}.{idx}"
                         idx += 1
-                    shutil.move(str(src_path), str(dst))
-                    result["backed_up_conflicts"].append(str(dst))
-                result["conflicts"] = []
+                    shutil.move(str(child), str(dst))
+                    item["backups"].append(str(dst))
+                claude_skills.rmdir()
+                item["claude_fix"].append("moved_residue_and_replaced")
+        else:
+            backup = backup_path(claude_skills, "bak")
+            claude_skills.rename(backup)
+            item["backups"].append(str(backup))
 
-            if not any(agents_skills.iterdir()):
-                agents_skills.rmdir()
-                agents_skills.symlink_to(expected_target)
-                if result["backed_up_conflicts"]:
-                    result["status"] = "migrated_with_backup_and_linked"
-                else:
-                    result["status"] = "migrated_and_linked"
-            else:
-                result["status"] = "partial_conflict"
-            return result
+    ensure_dir(claude_skills.parent)
+    rel = os.path.relpath(str(agents_skills), str(claude_skills.parent))
+    claude_skills.symlink_to(rel)
+    item["claude_fix"].append("created_link")
 
-        backup = agents_skills.with_name(f"{agents_skills.name}.bak")
-        agents_skills.rename(backup)
-        agents_skills.symlink_to(expected_target)
-        result["status"] = "backed_up_file_and_linked"
-        result["moved"].append(f"backup:{backup}")
-        return result
+def normalize_agent_entries(agents_skills: Path, item: dict) -> None:
+    if not agents_skills.is_dir():
+        return
+    legacy_bucket = agents_skills.parent / f"{agents_skills.name}.legacy.{run_ts}"
 
-    ensure_dir(agents_skills.parent)
-    agents_skills.symlink_to(expected_target)
-    result["status"] = "created_link"
-    return result
-
-def repair_claude_entries(claude_skills: Path, central_repo_path: Path) -> list:
-    repaired = []
-    if not claude_skills.is_dir():
-        return repaired
-
-    for skill_link in sorted(claude_skills.iterdir(), key=lambda p: p.name.lower()):
-        if not skill_link.is_symlink():
-            continue
-        target = os.readlink(skill_link)
-        if ".agents/skills" not in target:
+    for entry in sorted(agents_skills.iterdir(), key=lambda p: p.name.lower()):
+        if entry.name in (".DS_Store",):
+            try:
+                entry.unlink()
+            except Exception:
+                pass
             continue
 
-        candidate = central_repo_path / skill_link.name
-        if candidate.is_dir():
-            skill_link.unlink()
-            skill_link.symlink_to(str(candidate))
-            repaired.append(skill_link.name)
-    return repaired
+        if entry.is_symlink():
+            if sync_one_skill_from_central(entry.name, entry):
+                item["resynced_links"].append(entry.name)
+                continue
+            backup = backup_into_bucket(entry, legacy_bucket)
+            entry.rename(backup)
+            item["backups"].append(str(backup))
+            continue
+
+        if not entry.is_dir():
+            backup = backup_into_bucket(entry, legacy_bucket)
+            entry.rename(backup)
+            item["backups"].append(str(backup))
 
 for root in roots:
     agents_dir = root / ".agents"
     claude_dir = root / ".claude"
     cladue_dir = root / ".cladue"
 
-    if not (agents_dir.exists() or claude_dir.exists() or cladue_dir.exists()):
+    has_markers = agents_dir.exists() or claude_dir.exists() or cladue_dir.exists()
+    if root != scan_home_path and not has_markers:
         continue
 
     item = {
         "root": str(root),
         "renamed_cladue": False,
-        "agents_fix": None,
-        "repaired_claude_links": [],
+        "agents_fix": [],
+        "claude_fix": [],
+        "moved_from_claude": [],
+        "resynced_links": [],
+        "backups": [],
     }
 
     if cladue_dir.exists() and not claude_dir.exists():
         cladue_dir.rename(claude_dir)
         item["renamed_cladue"] = True
 
-    ensure_dir(claude_dir / "skills")
-    ensure_dir(agents_dir)
-
-    agents_skills = agents_dir / "skills"
-    claude_skills = claude_dir / "skills"
-
     is_global = root == scan_home_path
-    expected_target = str(claude_skills) if is_global else "../.claude/skills"
-    item["agents_fix"] = migrate_and_link_agents(agents_skills, claude_skills, expected_target)
+    if is_global:
+        agents_skills = Path(global_agents_dir).expanduser()
+        claude_skills = Path(global_claude_link).expanduser()
+    else:
+        agents_skills = root / project_agents_dir
+        claude_skills = root / project_claude_link
 
-    repaired = repair_claude_entries(claude_skills, Path(central_repo))
-    if repaired:
-        item["repaired_claude_links"] = repaired
+    ensure_dir(agents_skills.parent)
+    ensure_dir(claude_skills.parent)
+
+    ensure_real_agents_dir(agents_skills, item)
+    ensure_claude_link(claude_skills, agents_skills, item)
+    normalize_agent_entries(agents_skills, item)
 
     if not is_global:
         managed_projects.append(str(root))
-
     report.append(item)
 
 managed_projects = sorted(set(managed_projects))
 
 new_config = {
     "central_repo": central_repo,
-    "global_claude_dir": global_claude_dir,
-    "global_agents_link": global_agents_link,
-    "project_claude_dir": project_claude_dir,
-    "project_agents_link": project_agents_link,
+    "global_agents_dir": global_agents_dir,
+    "global_claude_link": global_claude_link,
+    "project_agents_dir": project_agents_dir,
+    "project_claude_link": project_claude_link,
+    "sync_mode": "copy",
+    # Legacy compatibility keys.
+    "global_claude_dir": global_agents_dir,
+    "global_agents_link": global_claude_link,
+    "project_claude_dir": project_claude_link,
+    "project_agents_link": project_agents_dir,
     "scan_roots": [str(scan_home_path), str(scan_ai_root_path)],
     "managed_projects": managed_projects,
 }
@@ -240,16 +326,17 @@ print(f"record_file={record_path}")
 print(f"managed_projects={len(record_data['managed_projects'])}")
 print("")
 for item in report:
-    fix = item["agents_fix"] or {}
-    print(f"[{item['root']}] agents={fix.get('status', 'n/a')}")
+    print(f"[{item['root']}]")
     if item["renamed_cladue"]:
         print("  - renamed .cladue -> .claude")
-    if fix.get("moved"):
-        print(f"  - moved_to_claude={','.join(fix['moved'])}")
-    if fix.get("backed_up_conflicts"):
-        print(f"  - backed_up_conflicts={len(fix['backed_up_conflicts'])}")
-    if fix.get("conflicts"):
-        print(f"  - conflicts={len(fix['conflicts'])}")
-    if item["repaired_claude_links"]:
-        print(f"  - repaired_links={','.join(item['repaired_claude_links'])}")
+    if item["agents_fix"]:
+        print(f"  - agents_fix={','.join(item['agents_fix'])}")
+    if item["claude_fix"]:
+        print(f"  - claude_fix={','.join(item['claude_fix'])}")
+    if item["moved_from_claude"]:
+        print(f"  - moved_from_claude={','.join(item['moved_from_claude'])}")
+    if item["resynced_links"]:
+        print(f"  - resynced_links={','.join(item['resynced_links'])}")
+    if item["backups"]:
+        print(f"  - backups={len(item['backups'])}")
 PYEOF

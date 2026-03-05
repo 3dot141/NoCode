@@ -1,32 +1,27 @@
 #!/bin/bash
-# Install a skill using npx skills add and record relationships
+# Install a skill using npx skills and sync it via central repository.
 
 SKILL_NAME=$1
 INSTALL_TARGET=$2
-NOCODE_DIR="$HOME/.nocode"
-RECORD_FILE="$NOCODE_DIR/skills-manager.json"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Ensure npx is available
-if ! command -v npx &> /dev/null; then
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/common.sh"
+load_manager_config
+init_record_file
+
+if ! command -v npx >/dev/null 2>&1; then
     echo "Error: npx is not installed. Please install Node.js first."
     exit 1
-fi
-
-# Create nocode directory if not exists
-mkdir -p "$NOCODE_DIR"
-
-# Initialize JSON file if not exists
-if [ ! -f "$RECORD_FILE" ]; then
-    echo '{"skills": {}}' > "$RECORD_FILE"
 fi
 
 if [ -z "$SKILL_NAME" ]; then
     echo "Usage: install_skill.sh <skill-name> [target]"
     echo ""
     echo "Targets:"
-    echo "  global   - Link to ~/.claude/skills/"
-    echo "  project  - Link to ./.claude/skills/"
-    echo "  both     - Link to both locations"
+    echo "  global   - Sync to configured global agents skills directory"
+    echo "  project  - Sync to current project (.agents/skills + .claude/skills mapping)"
+    echo "  both     - Sync to both locations"
     echo ""
     exit 1
 fi
@@ -35,20 +30,24 @@ echo ""
 echo "=== Install Skill: $SKILL_NAME ==="
 echo ""
 
-# Step 1: Use npx skills add to install
 echo "Running: npx skills add $SKILL_NAME"
 if npx skills add "$SKILL_NAME" 2>&1; then
     SKILL_SOURCE="npx"
-    # Try to get version from npx skills info
-    SKILL_VERSION=$(npx skills info "$SKILL_NAME" --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version','unknown'))" 2>/dev/null || echo "unknown")
 else
-    echo "Warning: npx skills add failed or skill already exists"
-    SKILL_SOURCE="local"
-    SKILL_VERSION="unknown"
+    echo "Warning: npx skills add failed or skill already exists; continuing."
+    SKILL_SOURCE="npx"
 fi
+
+SKILL_VERSION=$(npx skills info "$SKILL_NAME" --json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version','unknown'))" 2>/dev/null || echo "unknown")
+NPX_SKILL_PATH=$(resolve_npx_skill_path "$SKILL_NAME")
+
+if ! copy_skill_to_central "$SKILL_NAME" "$NPX_SKILL_PATH"; then
+    exit 1
+fi
+
+echo "Central repository ready: $CENTRAL_REPO/$SKILL_NAME"
 echo ""
 
-# Step 2: Determine install target
 if [ -n "$INSTALL_TARGET" ]; then
     case "$INSTALL_TARGET" in
         global|1) choice="1" ;;
@@ -60,21 +59,19 @@ if [ -n "$INSTALL_TARGET" ]; then
             ;;
     esac
 else
-    # Interactive mode
-    echo "Where would you like to link this skill?"
+    echo "Where would you like to sync this skill?"
     echo ""
-    echo "  1) Global (~/.claude/skills/) - Available in all projects"
-    echo "  2) Project (./.claude/skills/) - Available only in current project"
-    echo "  3) Both - Available globally and in current project"
+    echo "  1) Global ($GLOBAL_AGENTS_DIR)"
+    echo "  2) Project (./.agents/skills + ./.claude/skills -> ./.agents/skills)"
+    echo "  3) Both"
     echo "  4) Cancel"
     echo ""
-    read -p "Enter choice (1-4): " choice
+    read -r -p "Enter choice (1-4): " choice
 fi
 
-# Get project identifier (cross-platform: Linux sha256sum / macOS shasum)
 get_project_id() {
     local hash_cmd="sha256sum"
-    if ! command -v sha256sum &>/dev/null; then
+    if ! command -v sha256sum >/dev/null 2>&1; then
         hash_cmd="shasum -a 256"
     fi
 
@@ -88,106 +85,116 @@ get_project_id() {
 PROJECT_ID=$(get_project_id)
 PROJECT_PATH=$(pwd)
 
-# Source tracking
-SKILL_SOURCE="${SKILL_SOURCE:-local}"
-SKILL_SOURCE_URL="${SKILL_SOURCE_URL:-}"
-SKILL_VERSION="${SKILL_VERSION:-unknown}"
-
-# Update JSON record
 update_record() {
     local target=$1
-    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Use Python to safely update JSON
-    python3 - "$RECORD_FILE" "$SKILL_NAME" "$timestamp" "$target" "$PROJECT_ID" "$PROJECT_PATH" "$SKILL_SOURCE" "$SKILL_SOURCE_URL" "$SKILL_VERSION" << 'PYEOF'
+    python3 - "$RECORD_FILE" "$SKILL_NAME" "$timestamp" "$target" "$PROJECT_ID" "$PROJECT_PATH" "$SKILL_SOURCE" "$SKILL_VERSION" "$GLOBAL_AGENTS_DIR" "$PROJECT_AGENTS_REL" <<'PYEOF'
 import json
+import os
 import sys
 
-record_file, skill_name, timestamp, target, project_id, project_path, source, source_url, version = sys.argv[1:10]
+(record_file, skill_name, timestamp, target, project_id, project_path,
+ source, version, global_agents_dir, project_agents_rel) = sys.argv[1:11]
 
 try:
     with open(record_file, 'r') as f:
         data = json.load(f)
-except:
-    data = {"skills": {}}
+except Exception:
+    data = {}
+
+data.setdefault('skills', {})
+data.setdefault('managed_projects', [])
 
 if skill_name not in data['skills']:
     data['skills'][skill_name] = {
         'installed_at': timestamp,
         'source': source,
-        'source_url': source_url if source_url else None,
         'version': version,
         'locations': []
     }
 
 location = {
     'type': target,
-    'linked_at': timestamp
+    'linked_at': timestamp,
 }
 
-if target == 'project':
+if target == 'global':
+    location['path'] = os.path.join(global_agents_dir, skill_name)
+elif target == 'project':
     location['project_id'] = project_id
     location['project_path'] = project_path
+    location['path'] = os.path.join(project_path, project_agents_rel, skill_name)
+    if project_path not in data['managed_projects']:
+        data['managed_projects'].append(project_path)
 
-# Check if already exists
 exists = False
 for loc in data['skills'][skill_name]['locations']:
-    if loc['type'] == target:
-        if target != 'project' or loc.get('project_id') == project_id:
-            exists = True
-            break
+    if loc.get('type') != target:
+        continue
+    if target == 'project' and loc.get('project_id') != project_id:
+        continue
+    exists = True
+    break
 
 if not exists:
     data['skills'][skill_name]['locations'].append(location)
 
 with open(record_file, 'w') as f:
     json.dump(data, f, indent=2)
-
-print(f"Updated record: {record_file}")
 PYEOF
 }
 
-# Link functions
 link_global() {
-    echo "  Linking to global..."
-    if npx skills link "$SKILL_NAME" --global 2>/dev/null || \
-       ln -sf "$(npx skills get-path "$SKILL_NAME" 2>/dev/null || echo "$HOME/.claude/skills/$SKILL_NAME")" "$HOME/.claude/skills/$SKILL_NAME" 2>/dev/null; then
-        echo "  ✓ Linked to ~/.claude/skills/"
+    echo "  Syncing globally..."
+    mkdir -p "$GLOBAL_AGENTS_DIR"
+    if ! ensure_global_claude_link; then
+        return 1
+    fi
+
+    if sync_skill_to_dir "$SKILL_NAME" "$GLOBAL_AGENTS_DIR"; then
+        echo "  ✓ Synced: $GLOBAL_AGENTS_DIR/$SKILL_NAME"
+        echo "  ✓ Mapping: $GLOBAL_CLAUDE_LINK -> $GLOBAL_AGENTS_DIR"
         update_record "global"
     else
-        echo "  ✗ Failed to link globally"
+        echo "  ✗ Failed global sync"
         return 1
     fi
 }
 
 link_project() {
-    echo "  Linking to project..."
-    mkdir -p .claude/skills
-    if npx skills link "$SKILL_NAME" --local 2>/dev/null || \
-       ln -sf "$(npx skills get-path "$SKILL_NAME" 2>/dev/null || echo "$HOME/.claude/skills/$SKILL_NAME")" ".claude/skills/$SKILL_NAME" 2>/dev/null; then
-        echo "  ✓ Linked to ./.claude/skills/"
+    echo "  Syncing to current project..."
+
+    if ! ensure_project_claude_link "$PROJECT_PATH"; then
+        return 1
+    fi
+
+    if sync_skill_to_dir "$SKILL_NAME" "$PROJECT_PATH/$PROJECT_AGENTS_REL"; then
+        echo "  ✓ Synced: $PROJECT_PATH/$PROJECT_AGENTS_REL/$SKILL_NAME"
+        echo "  ✓ Mapping: $PROJECT_PATH/$PROJECT_CLAUDE_REL -> $PROJECT_PATH/$PROJECT_AGENTS_REL"
+        record_managed_project "$PROJECT_PATH"
         update_record "project"
     else
-        echo "  ✗ Failed to link to project"
+        echo "  ✗ Failed project sync"
         return 1
     fi
 }
 
-# Execute based on choice
-case $choice in
+case "$choice" in
     1)
-        link_global
+        link_global || exit 1
         echo ""
         echo "Done! Skill '$SKILL_NAME' is now available globally."
         ;;
     2)
-        link_project
+        link_project || exit 1
         echo ""
         echo "Done! Skill '$SKILL_NAME' is now available in this project."
         ;;
     3)
-        link_global
-        link_project
+        link_global || exit 1
+        link_project || exit 1
         echo ""
         echo "Done! Skill '$SKILL_NAME' is now available globally and in this project."
         ;;

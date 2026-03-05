@@ -1,33 +1,28 @@
 #!/bin/bash
-# Link a skill to project .claude/skills/
+# Sync a skill to current project's .agents/skills and map .claude/skills.
 
 SKILL_NAME=$1
-CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
-PROJECT_DIR="./.claude/skills"
+PROJECT_PATH=$(pwd)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/common.sh"
+load_manager_config
+init_record_file
 
 if [ -z "$SKILL_NAME" ]; then
     echo "Usage: link_project.sh <skill-name>"
     exit 1
 fi
 
-if [ ! -d "$CENTRAL_REPO/$SKILL_NAME" ]; then
-    echo "Error: Skill '$SKILL_NAME' not found in central repository"
+if ! ensure_project_claude_link "$PROJECT_PATH"; then
     exit 1
 fi
 
-if [ ! -d "$PROJECT_DIR" ]; then
-    mkdir -p "$PROJECT_DIR"
-fi
-
-if [ -L "$PROJECT_DIR/$SKILL_NAME" ]; then
-    echo "Skill '$SKILL_NAME' already linked in project"
-    exit 0
-fi
-
-if [ -e "$PROJECT_DIR/$SKILL_NAME" ]; then
-    echo "Error: '$SKILL_NAME' already exists in project (not a symlink)"
+if sync_skill_to_dir "$SKILL_NAME" "$PROJECT_PATH/$PROJECT_AGENTS_REL"; then
+    record_managed_project "$PROJECT_PATH"
+    echo "Synced '$SKILL_NAME' to ./$PROJECT_AGENTS_REL/"
+    echo "Mapped project claude path: ./$PROJECT_CLAUDE_REL -> ./$PROJECT_AGENTS_REL"
+else
     exit 1
 fi
-
-ln -s "$CENTRAL_REPO/$SKILL_NAME" "$PROJECT_DIR/$SKILL_NAME"
-echo "Linked '$SKILL_NAME' to ./.claude/skills/"

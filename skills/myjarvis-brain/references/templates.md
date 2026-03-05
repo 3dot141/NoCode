@@ -1,15 +1,17 @@
 # Document Templates
 
-| 文档类型 | 模板文件 | 结构 | 目标路径 |
-|----------|----------|------|----------|
-| 日记 | [template-daily-quick.md](template-daily-quick.md) | 今天要做什么 → 今天做了什么 → 总结复盘 | `Flow/04-Daily/YYMM/YYMMDD-日记.md` |
-| 周记 | [template-weekly-quick.md](template-weekly-quick.md) | 本周要做什么 → 本周做了什么 → 总结复盘 | `Flow/03-Week/YYMM/YYMMDD-周记.md` |
-| 月计划 | [template-monthly-quick.md](template-monthly-quick.md) | 本月要做什么 → 本月做了什么 → 总结复盘 | `Flow/02-Month/YYMM-月度计划.md` |
+> **When to read this**: When user requests to create Flow documents (daily log, weekly log, monthly plan) and you need to know which template to use.
+
+| Document Type | Template File | Structure | Target Path |
+|---------------|---------------|-----------|-------------|
+| Daily Log | [template-daily-quick.md](template-daily-quick.md) | Today's plan → Today's accomplishments → Summary review | `Flow/04-Daily/YYMM/YYMMDD-Daily.md` |
+| Weekly Log | [template-weekly-quick.md](template-weekly-quick.md) | This week's plan → This week's accomplishments → Summary review | `Flow/03-Week/YYMM/YYMMDD-Weekly.md` |
+| Monthly Plan | [template-monthly-quick.md](template-monthly-quick.md) | This month's plan → This month's accomplishments → Summary review | `Flow/02-Month/YYMM-Monthly-Plan.md` |
 
 ---
 
-## 文件命名规范
+## File Naming Conventions
 
-- 日记: `YYMMDD-日记.md`
-- 周记: `YYMMDD-周记.md` (周一日期)
-- 月计划: `YYMM-月度计划.md`
+- Daily: `YYMMDD-Daily.md`
+- Weekly: `YYMMDD-Weekly.md` (Monday date)
+- Monthly: `YYMM-Monthly-Plan.md`

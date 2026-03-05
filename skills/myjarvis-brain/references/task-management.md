@@ -1,84 +1,86 @@
 # Task Management Reference
 
-任务管理的方法论和工作流。
+> **When to read this**: When user requests task management operations (create/update tasks, track status, decompose goals, generate summaries).
+
+Task management methodology and workflows.
 
 ---
 
-## 层级结构
+## Hierarchy Structure
 
 ```
-年度计划 (Flow/01-Year/)
+Annual Plan (Flow/01-Year/)
     │
     ▼
-月度计划 (Flow/02-Month/)
+Monthly Plan (Flow/02-Month/)
     │
     ▼
-周记 (Flow/03-Week/YYMM/)
+Weekly Log (Flow/03-Week/YYMM/)
     │
     ▼
-日记 (Flow/04-Daily/YYMM/)
+Daily Log (Flow/04-Daily/YYMM/)
 ```
 
-**流向**:
-- **自上而下**: 年度目标 → 月度目标 → 周任务 → 日行动
-- **自下而上**: 日完成 → 周总结 → 月复盘 → 年评估
+**Flow**:
+- **Top-down**: Annual goals → Monthly goals → Weekly tasks → Daily actions
+- **Bottom-up**: Daily completion → Weekly summary → Monthly review → Annual assessment
 
 ---
 
-## 状态定义
+## Status Definitions
 
 ```
-[ ] 待办 → [/] 进行中 → [x] 完成
+[ ] Todo → [/] In Progress → [x] Done
             ↓
-      [-] 取消/阻塞
+      [-] Cancelled/Blocked
 ```
 
-| 状态 | 标记 | 含义 |
-|------|------|------|
-| 待办 | `[ ]` | 未开始，准备执行 |
-| 进行中 | `[/]` | 正在执行 |
-| 完成 | `[x]` | 已完成 |
-| 取消 | `[-]` | 不再需要或长期阻塞 |
+| Status | Marker | Meaning |
+|--------|--------|---------|
+| Todo | `[ ]` | Not started, ready to execute |
+| In Progress | `[/]` | Currently executing |
+| Done | `[x]` | Completed |
+| Cancelled | `[-]` | No longer needed or long-term blocked |
 
 ---
 
-## 优先级
+## Priorities
 
-| 级别 | 含义 | 时间占比 |
-|------|------|----------|
-| P0 | 必须完成 | 40-50% |
-| P1 | 应该完成 | 30-40% |
-| P2 | 可以完成 | 10-20% |
-| P3 | 可选 | 0-10% |
-
----
-
-## 周期总结工作流
-
-### 每日 (结束时)
-1. 更新已完成任务状态
-2. 决定未完成任务：移至明日或取消
-3. 记录阻塞问题
-4. 草拟明日计划
-
-### 每周 (周日晚上)
-1. 回顾本周所有日记
-2. 统计任务完成率
-3. 识别模式（高效日、阻塞点）
-4. 评估月度目标进度
-5. 规划下周重点
-
-### 每月 (月末)
-1. 回顾所有周记
-2. 评估目标完成状态
-3. 分析时间分配模式
-4. 调整下月计划
+| Level | Meaning | Time Allocation |
+|-------|---------|-----------------|
+| P0 | Must complete | 40-50% |
+| P1 | Should complete | 30-40% |
+| P2 | Can complete | 10-20% |
+| P3 | Optional | 0-10% |
 
 ---
 
-## 相关文档
+## Periodic Summary Workflow
 
-- [templates.md](templates.md) - 模板快速选择
-- [template-daily-quick.md](template-daily-quick.md) - 日记模板
-- [template-weekly-quick.md](template-weekly-quick.md) - 周记模板
-- [template-monthly-quick.md](template-monthly-quick.md) - 月计划模板
+### Daily (at end of day)
+1. Update completed task status
+2. Decide on incomplete tasks: Move to tomorrow or cancel
+3. Record blocking issues
+4. Draft tomorrow's plan
+
+### Weekly (Sunday evening)
+1. Review all daily logs for the week
+2. Calculate task completion rate
+3. Identify patterns (productive days, blockers)
+4. Evaluate monthly goal progress
+5. Plan next week's focus
+
+### Monthly (end of month)
+1. Review all weekly logs
+2. Assess goal completion status
+3. Analyze time allocation patterns
+4. Adjust next month's plan
+
+---
+
+## Related Documents
+
+- [templates.md](templates.md) - Template quick selection
+- [template-daily-quick.md](template-daily-quick.md) - Daily log template
+- [template-weekly-quick.md](template-weekly-quick.md) - Weekly log template
+- [template-monthly-quick.md](template-monthly-quick.md) - Monthly plan template

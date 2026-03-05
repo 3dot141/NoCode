@@ -9,7 +9,10 @@ This is a **Claude Code Skills Repository** - a centralized collection of skills
 **Key Paths:**
 - Central repository: `/Users/yes365/AI/NoCode/skills/`
 - Global symlinks: `~/.claude/skills/`
+- Global agent mapping: `~/.agents/skills -> ~/.claude/skills`
 - Project symlinks: `./.claude/skills/`
+- Project agent mapping: `./.agents/skills -> ./.claude/skills`
+- Manager config: `~/.nocode/skills-manager-config.json`
 - Installation records: `~/.nocode/skills-manager.json`
 
 ## Skill Structure
@@ -46,6 +49,8 @@ bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/list_skills.sh
 
 # Install/link skills
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/install_skill.sh <skill> [global|project|both]
+bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/update_skill.sh <skill>
+bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/sync_projects.sh [skill]
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/link_global.sh <skill>
 bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/link_project.sh <skill>
 
@@ -59,6 +64,8 @@ bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/check_links.sh
 **Important Principles:**
 - All skills reside in central repository (`/Users/yes365/AI/NoCode/skills/`)
 - Projects use symlinks, never direct copies
+- Project `.agents/skills` is a symlink to project `.claude/skills`
+- Internet install/update must use `npx skills`
 - Installation records stored in `~/.nocode/skills-manager.json`
 
 ## Creating New Skills

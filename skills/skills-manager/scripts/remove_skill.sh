@@ -1,12 +1,16 @@
 #!/bin/bash
-# Remove a skill from central repository and all symlinks
+# Remove a skill from central repository and all synced locations
 # 功能：选择删除范围（当前项目/全局），全局删除时通过 JSON 删除所有
 
 SKILL_NAME=$1
 REMOVE_SCOPE=$2
-NOCODE_DIR="$HOME/.nocode"
-RECORD_FILE="$NOCODE_DIR/skills-manager.json"
 DRY_RUN=false
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/common.sh"
+load_manager_config
+init_record_file
 
 # Ensure npx is available
 if ! command -v npx &> /dev/null; then
@@ -79,13 +83,15 @@ EOF
 # Get all locations from JSON
 get_all_locations() {
     if [ -f "$RECORD_FILE" ]; then
-        python3 - "$SKILL_NAME" "$RECORD_FILE" << 'PYEOF' 2>/dev/null
+        python3 - "$SKILL_NAME" "$RECORD_FILE" "$GLOBAL_AGENTS_DIR" "$PROJECT_AGENTS_REL" << 'PYEOF' 2>/dev/null
 import json
 import os
 import sys
 
 skill_name = sys.argv[1]
 record_file = sys.argv[2]
+global_agents_dir = os.path.expanduser(sys.argv[3])
+project_agents_rel = sys.argv[4]
 
 try:
     with open(record_file, 'r') as f:
@@ -97,11 +103,11 @@ try:
     for loc in locations:
         loc_type = loc.get('type', '')
         if loc_type == 'global':
-            print(f"GLOBAL|{os.path.expanduser(f'~/.claude/skills/{skill_name}')}")
+            print(f"GLOBAL|{os.path.join(global_agents_dir, skill_name)}")
         elif loc_type == 'project':
             project_path = loc.get('project_path', '')
             if project_path:
-                print(f"PROJECT|{project_path}/.claude/skills/{skill_name}")
+                print(f"PROJECT|{os.path.join(project_path, project_agents_rel, skill_name)}")
 except Exception as e:
     pass
 PYEOF
@@ -127,8 +133,8 @@ if [ -z "$REMOVE_SCOPE" ]; then
     # Interactive mode
     echo "Where would you like to remove this skill from?"
     echo ""
-    echo "  1) Current project only - Remove from ./.claude/skills/"
-    echo "  2) Global - Remove from all locations (global + all projects)"
+    echo "  1) Current project only - Remove from ./$PROJECT_AGENTS_REL/"
+    echo "  2) Global - Remove from all locations ($GLOBAL_AGENTS_DIR + all projects)"
     echo "  3) Cancel"
     echo ""
     read -p "Enter choice (1-3): " scope_choice
@@ -146,8 +152,8 @@ TARGETS=()
 
 if [ "$REMOVE_SCOPE" = "project" ]; then
     # Remove from current project only
-    CURRENT_PROJECT_LINK="./.claude/skills/$SKILL_NAME"
-    if [ -L "$CURRENT_PROJECT_LINK" ]; then
+    CURRENT_PROJECT_LINK="./$PROJECT_AGENTS_REL/$SKILL_NAME"
+    if [ -e "$CURRENT_PROJECT_LINK" ] || [ -L "$CURRENT_PROJECT_LINK" ]; then
         TARGETS+=("$CURRENT_PROJECT_LINK")
     fi
 
@@ -171,23 +177,23 @@ elif [ "$REMOVE_SCOPE" = "global" ]; then
 
         # Fast fallback: only check standard locations
         # 1. Global location
-        if [ -L "$HOME/.claude/skills/$SKILL_NAME" ]; then
-            TARGETS+=("$HOME/.claude/skills/$SKILL_NAME")
+        if [ -e "$GLOBAL_AGENTS_DIR/$SKILL_NAME" ] || [ -L "$GLOBAL_AGENTS_DIR/$SKILL_NAME" ]; then
+            TARGETS+=("$GLOBAL_AGENTS_DIR/$SKILL_NAME")
         fi
 
         # 2. Current project
-        if [ -L "./.claude/skills/$SKILL_NAME" ]; then
-            TARGETS+=("./.claude/skills/$SKILL_NAME")
+        if [ -e "./$PROJECT_AGENTS_REL/$SKILL_NAME" ] || [ -L "./$PROJECT_AGENTS_REL/$SKILL_NAME" ]; then
+            TARGETS+=("./$PROJECT_AGENTS_REL/$SKILL_NAME")
         fi
 
         # 3. Common project directories (fast scan, not recursive)
         for dir in "$HOME/AI" "$HOME/Projects" "$HOME/workspace" "$HOME/code"; do
             if [ -d "$dir" ]; then
-                # Only check immediate subdirectories for .claude/skills/
+                # Only check immediate subdirectories for agents skills directory
                 for project in "$dir"/*; do
-                    if [ -d "$project/.claude/skills" ]; then
-                        link_path="$project/.claude/skills/$SKILL_NAME"
-                        if [ -L "$link_path" ]; then
+                    if [ -d "$project/$PROJECT_AGENTS_REL" ]; then
+                        link_path="$project/$PROJECT_AGENTS_REL/$SKILL_NAME"
+                        if [ -e "$link_path" ] || [ -L "$link_path" ]; then
                             TARGETS+=("$link_path")
                         fi
                     fi
@@ -197,14 +203,14 @@ elif [ "$REMOVE_SCOPE" = "global" ]; then
     else
         # Use JSON record
         while IFS='|' read -r type path; do
-            if [ -n "$path" ] && [ -L "$path" ]; then
+            if [ -n "$path" ] && { [ -e "$path" ] || [ -L "$path" ]; }; then
                 TARGETS+=("$path")
             fi
         done < <(get_all_locations)
 
         # Also check global location
-        GLOBAL_LINK="$HOME/.claude/skills/$SKILL_NAME"
-        if [ -L "$GLOBAL_LINK" ]; then
+        GLOBAL_LINK="$GLOBAL_AGENTS_DIR/$SKILL_NAME"
+        if [ -e "$GLOBAL_LINK" ] || [ -L "$GLOBAL_LINK" ]; then
             local_found=false
             for t in "${TARGETS[@]}"; do
                 if [ "$t" = "$GLOBAL_LINK" ]; then
@@ -262,7 +268,7 @@ echo ""
 echo "=== Removing ==="
 
 for target in "${TARGETS[@]}"; do
-    if rm "$target" 2>/dev/null; then
+    if rm -rf "$target" 2>/dev/null; then
         echo "✓ Removed: $target"
     else
         echo "✗ Failed to remove: $target"
@@ -298,7 +304,6 @@ EOF
     fi
 
     # Try to remove from central repo
-    CENTRAL_REPO="/Users/yes365/AI/NoCode/skills"
     if [ -d "$CENTRAL_REPO/$SKILL_NAME" ]; then
         if rm -rf "$CENTRAL_REPO/$SKILL_NAME" 2>/dev/null; then
             echo "✓ Removed from central repository"
