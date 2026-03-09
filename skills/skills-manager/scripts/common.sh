@@ -2,7 +2,7 @@
 # Shared helpers for skills-manager scripts.
 
 NOCODE_DIR="${SKILLS_MANAGER_STATE_DIR:-$HOME/.nocode}"
-RECORD_FILE="$NOCODE_DIR/skills-manager.json"
+RECORD_FILE="$NOCODE_DIR/skills-manager-installed.json"
 CONFIG_FILE="$NOCODE_DIR/skills-manager-config.json"
 
 DEFAULT_CENTRAL_REPO="$HOME/AI/NoCode/skills"
@@ -223,6 +223,14 @@ PYEOF
 
 init_record_file() {
     mkdir -p "$NOCODE_DIR"
+
+    # Migrate old record file if exists
+    local old_record_file="$NOCODE_DIR/skills-manager.json"
+    if [ -f "$old_record_file" ] && [ ! -f "$RECORD_FILE" ]; then
+        mv "$old_record_file" "$RECORD_FILE"
+        echo "Migrated: $old_record_file -> $RECORD_FILE"
+    fi
+
     if [ ! -f "$RECORD_FILE" ]; then
         echo '{"skills": {}, "managed_projects": []}' > "$RECORD_FILE"
     fi
@@ -328,6 +336,95 @@ data.setdefault('skills', {})
 data.setdefault('managed_projects', [])
 if project_path not in data['managed_projects']:
     data['managed_projects'].append(project_path)
+
+with open(record_file, 'w') as f:
+    json.dump(data, f, indent=2)
+PYEOF
+}
+
+# Record skill installation/update in skills-manager-installed.json
+record_skill() {
+    local skill_name=$1
+    local target=$2
+    local source=$3
+    local version=$4
+    local project_id=$5
+    local project_path=$6
+    local global_agents_dir=$7
+    local project_agents_rel=$8
+    local git_url=$9
+    local git_subdir=${10}
+
+    init_record_file
+
+    python3 - "$RECORD_FILE" "$skill_name" "$target" "$source" "$version" "$project_id" "$project_path" "$global_agents_dir" "$project_agents_rel" "$git_url" "$git_subdir" <<'PYEOF'
+import json
+import sys
+from datetime import datetime, timezone
+
+(record_file, skill_name, target, source, version,
+ project_id, project_path, global_agents_dir, project_agents_rel, git_url, git_subdir) = sys.argv[1:12]
+
+try:
+    with open(record_file, 'r') as f:
+        data = json.load(f)
+except Exception:
+    data = {}
+
+data.setdefault('skills', {})
+data.setdefault('managed_projects', [])
+
+timestamp = datetime.now(timezone.utc).isoformat()
+
+# Create skill entry if not exists
+if skill_name not in data['skills']:
+    data['skills'][skill_name] = {
+        'installed_at': timestamp,
+        'source': source,
+        'version': version if version else 'unknown',
+        'locations': []
+    }
+else:
+    # Update source and version if provided
+    if source and source != 'unknown':
+        data['skills'][skill_name]['source'] = source
+    if version and version != 'unknown':
+        data['skills'][skill_name]['version'] = version
+
+# Save git info if provided
+if git_url:
+    data['skills'][skill_name]['git_url'] = git_url
+if git_subdir:
+    data['skills'][skill_name]['git_subdir'] = git_subdir
+
+location = {
+    'type': target,
+    'linked_at': timestamp,
+}
+
+if target == 'global':
+    location['path'] = global_agents_dir + '/' + skill_name
+elif target == 'project':
+    location['project_id'] = project_id
+    location['project_path'] = project_path
+    location['path'] = project_path + '/' + project_agents_rel + '/' + skill_name
+    if project_path and project_path not in data['managed_projects']:
+        data['managed_projects'].append(project_path)
+
+# Check if location already exists
+exists = False
+for loc in data['skills'][skill_name]['locations']:
+    if loc.get('type') != target:
+        continue
+    if target == 'project' and loc.get('project_id') != project_id:
+        continue
+    exists = True
+    # Update existing location timestamp
+    loc['linked_at'] = timestamp
+    break
+
+if not exists:
+    data['skills'][skill_name]['locations'].append(location)
 
 with open(record_file, 'w') as f:
     json.dump(data, f, indent=2)

@@ -1,0 +1,3 @@
+GIT_URL=https://github.com/massgen/MassGen.git
+GIT_SUBDIR=massgen/skills/file-search
+REPO_NAME=MassGen

@@ -1,30 +1,106 @@
 ---
 name: skills-manager
-description: Manage centralized skills repository with .agents/.claude mapping, install/update via npx skills, and sync to managed projects.
+description: Manage centralized skills repository with .agents/.claude mapping, install/update via npx skills or git, and sync to managed projects. Use when users need to install, update, sync, or manage Claude skills across projects.
 ---
 
 # Skills Manager
 
-集中式管理 Skill：
-- 中央仓库：`~/AI/NoCode/skills/`（可在配置中覆盖）
-- 主目录：`./.agents/skills/`（技能实体目录）
-- Claude 目录：`./.claude/skills -> ./.agents/skills`（目录级软链接）
+Manage skills across centralized repository and projects.
 
-## Principles
+## Quick Start
 
-- 项目内技能实体目录是 `.agents/skills`。
-- `.claude/skills` 必须软链接到 `.agents/skills`。
-- 项目内 skill 不再软链接到中央仓库，通过脚本同步（复制）内容。
-- 不做实时自动监听同步；所有同步动作都通过脚本触发。
-- 从互联网安装和更新统一走 `npx skills`。
-- 通过 `~/.nocode/skills-manager-config.json` 管理路径。
+**Install a skill:**
+```bash
+bash ~/AI/NoCode/skills/skills-manager/scripts/install_skill.sh <skill> [global|project|both]
+```
 
-## Config
+**Update a skill:**
+```bash
+bash ~/AI/NoCode/skills/skills-manager/scripts/update_skill.sh <skill>
+```
 
-默认配置文件：
-- `~/.nocode/skills-manager-config.json`
+**Sync to projects:**
+```bash
+bash ~/AI/NoCode/skills/skills-manager/scripts/sync_projects.sh [skill]
+```
 
-默认内容：
+## Architecture
+
+### Directory Structure
+
+```
+Central Repository (source of truth)
+~/AI/NoCode/skills/<skill>/
+
+Global Installation
+~/.agents/skills/<skill>/       # Entity directory
+~/.claude/skills -> ~/.agents/skills  # Symlink
+
+Project Installation
+./.agents/skills/<skill>/       # Entity directory (synced from central)
+./.claude/skills -> .agents/skills    # Symlink
+```
+
+### Key Principles
+
+- **Central repository** (`~/AI/NoCode/skills/`) is the single source of truth
+- **`.agents/skills`** contains actual files; **`.claude/skills`** is only a directory symlink
+- **Copy-based sync**: Skills are copied (not symlinked) from central to projects
+- **Manual sync**: Run scripts explicitly; no automatic file watching
+
+## Commands Reference
+
+### Install Skills
+
+| Command | Purpose |
+|---------|---------|
+| `install_skill.sh <skill> [target] [source]` | Install from npx, git, or local |
+| `install_skill.sh owner/repo both git` | Install from GitHub repository |
+| `install_skill.sh owner/repo both git path/to/skill my-skill` | Install subdirectory as named skill |
+
+**Source types:**
+- `npx` (default): Install via `npx skills add`
+- `git`: Clone from git repository
+- `local`: Use existing central repository copy
+
+### Update Skills
+
+| Command | Purpose |
+|---------|---------|
+| `update_skill.sh <skill>` | Auto-detect source and update |
+| `update_skill.sh <skill> local` | Skip update, just sync existing |
+| `update_skill.sh <skill> git` | Force update from git |
+| `update_skill.sh <skill> npx` | Force update from npx |
+
+**Auto-detection order:**
+1. Check installation record (`~/.nocode/skills-manager.json`)
+2. Detect from central repo: `.git/` → git, npx available → npx, else → local
+
+### Sync Skills
+
+| Command | Purpose |
+|---------|---------|
+| `sync_projects.sh [skill]` | Bidirectional sync (latest wins) |
+| `sync_projects.sh [skill] --from-central` | Force central → projects |
+| `promote_skill.sh <skill> [project_path]` | Project → central → all projects |
+
+**Sync behavior:**
+- Default: Compare directory mtime, copy from newest to all other locations
+- `--from-central`: Always use central repository as source
+- `promote_skill.sh`: Useful when editing skill in a project, want to propagate changes
+
+### Maintenance
+
+| Command | Purpose |
+|---------|---------|
+| `list_skills.sh` | List all skills in central repository |
+| `check_links.sh` | Verify and fix `.claude -> .agents` mappings |
+| `rebuild_config.sh` | Scan projects and rebuild configuration |
+| `remove_skill.sh <skill> [--global\|--project]` | Remove skill from locations |
+
+## Configuration
+
+**Config file:** `~/.nocode/skills-manager-config.json`
 
 ```json
 {
@@ -37,70 +113,47 @@ description: Manage centralized skills repository with .agents/.claude mapping, 
 }
 ```
 
-安装记录：`~/.nocode/skills-manager.json`
+**Installation record:** `~/.nocode/skills-manager-installed.json`
 
-## Commands
+## Workflows
+
+### Installing from Git
 
 ```bash
-# 列出中央仓库 skills
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/list_skills.sh
+# Install from GitHub shorthand
+bash scripts/install_skill.sh 3dot141/my-skills both git
 
-# 从互联网安装（npx skills add），并同步到 global/project/both
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/install_skill.sh <skill> [global|project|both]
+# Install specific subdirectory as named skill
+bash scripts/install_skill.sh 3dot141/my-skills both git skills/pdf-skill pdf-skill
 
-# 手动同步
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/link_global.sh <skill>
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/link_project.sh <skill>
-
-# 从互联网更新（npx skills update），更新中央仓库并同步项目
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/update_skill.sh <skill>
-
-# 双向同步（默认）：中央仓库 <-> 受管项目
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/sync_projects.sh [skill]
-
-# 单向同步：中央仓库 -> 受管项目
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/sync_projects.sh [skill] --from-central
-
-# 将项目 .agents/skills/<skill> 中转回中央仓库并向外同步
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/promote_skill.sh <skill> [project_path]
-
-# 检查/修复映射（含 .claude -> .agents 映射）并修复误用的 skill 软链
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/check_links.sh
-
-# 扫描 /Users/yes365 与 /Users/yes365/AI 子目录，修复映射并重建配置
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/rebuild_config.sh
-
-# 删除
-bash /Users/yes365/AI/NoCode/skills/skills-manager/scripts/remove_skill.sh <skill> [--global|--project]
+# Install from full URL
+bash scripts/install_skill.sh https://github.com/3dot141/my-skills.git both git
 ```
 
-## Sync Behavior
+### Developing a Skill Locally
 
-同步规范（双向）：
-- `sync_projects.sh` 默认双向同步（中央仓库 <-> 子仓库），按目录最新修改时间选择源，再复制到其他端。
-- `sync_projects.sh --from-central` 强制中央仓库作为源，单向下发到子仓库。
-- `install_skill.sh` / `update_skill.sh` 使用中央仓库作为权威源并下发。
-- `promote_skill.sh` 先将项目改动中转到中央，再以中央为源下发。
-- 默认不自动监听文件变化；需要手动执行同步脚本。
+```bash
+# 1. Edit skill in central repository
+cd ~/AI/NoCode/skills/my-skill/
+# ... make changes ...
 
-行为说明：
-- 修改中央仓库 skill 内容后，执行 `sync_projects.sh` 可双向同步，或用 `--from-central` 强制下发。
-- 修改项目 `.agents/skills/<skill>` 后，执行 `sync_projects.sh` 可自动回流中央；也可先 `promote_skill.sh` 再下发。
-- `update_skill.sh` 会自动触发按 skill 同步到受管项目。
+# 2. Sync to all managed projects (no internet)
+bash scripts/sync_projects.sh my-skill
 
-## Directory Topology
-
-```text
-中央仓库
-~/AI/NoCode/skills/<skill>
-
-项目内
-./.agents/skills/<skill>   # 实体目录（由脚本从中央仓库同步）
-./.claude/skills -> ../.agents/skills
+# 3. Or use --from-central to force overwrite projects
+bash scripts/sync_projects.sh my-skill --from-central
 ```
 
-## Notes
+### Promoting Project Changes
 
-- `.agents/skills` 放实体文件，`.claude/skills` 只做目录映射。
-- 修改 skill 请以中央仓库路径为准。
-- 若路径定制，请修改配置文件而不是改脚本常量。
+```bash
+# Skill edited in project, propagate to central and other projects
+bash scripts/promote_skill.sh my-skill /path/to/project
+```
+
+## Git-Installed Skills
+
+When installing from git, metadata is saved:
+- `.skill-git-info` in central repo tracks URL and subdirectory
+- `update_skill.sh` automatically re-clones from source
+- Supports monorepo setups with subdirectory paths
